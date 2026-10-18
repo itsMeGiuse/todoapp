@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="it">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>La mia to-do</title>
+		<style>
+			body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 0 16px; }
+			.riga { display: flex; align-items: center; gap: 8px; padding: 6px; padding: 6px 0; border-bottom: 1px
+		solid #ddd; }
+			.riga.fatta span { text-decoration: line-through; color: #888; }
+			.riga span { flex: 1; }
+			form { display: flex; gap: 8px; margin-bottom: 16px; }
+			input[type=text] { flex: 1, padding: 8px; }
+			button { padding: 6px 10px; cursor: pointer; }
+		</style>
+	</head>
+	<body>
+		<h1>La mia to-do</h1>
+		<form id="form-nuova">
+			<input type="text" id="testo" placeholder="Nuova attività..." required>
+			<button type="submit">Aggiungi</button>
+		</form>
+		
+		<div id="lista"></div>
+		
+		<script>
+			const lista = document.getElementById("lista");
+			const form = document.getElementById("form-nuova");
+			const campoTesto = document.getElementById("testo");
+			
+			async function carica(){
+				const risposta = await fetch("/attivita");
+				const attivita = await risposta.json();
+				lista.innerHTML = "";
+				for (const a of attivita){
+					const riga = document.createElement("div");
+					riga.className = "riga" + (a.fatta ? "fatta" : "");
+					
+					const check = document.createElement("input");
+					check.type = "checkbox";
+					check.checked = a.fatta;
+					check.onchange = () => cambiaStato(a.id, check.checked);
+					
+					const testo = document.createElement("span");
+					testo.textContent = a.testo;
+					
+					const cancella = document.createElement("button");
+					cancella.textContent = "X";
+					cancella.onclick = () => elimina(a.id)
+					
+					riga.append(check, testo, cancella);
+					lista.append(riga);
+					}
+				}
+				
+			async function aggiungi(testo){
+				await fetch("/attivita", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ testo: testo }),
+					});
+					await carica();
+				}
+					
+			async function cambiaStato(id, fatta){
+				await fetch("/attivita/" +id, {
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ fatta: fatta }),
+					});
+				await carica();
+				}
+					
+			async function elimina(id){
+				await fetch("/attivita/" +id, { method: "DELETE" });
+				await carica();
+				}
+				
+			form.onsubmit = (e) => {
+				e.preventDefault();
+				aggiungi(campoTesto.value);
+				campoTesto.value = "";
+				};
+				
+			carica();
+		</script>
+	</body>
+</html>
